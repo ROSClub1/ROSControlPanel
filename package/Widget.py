@@ -58,7 +58,7 @@ class MainWidget( QWidget ):
 	def changeLabel_2_Value(self, value):
 
 		# 通过滑块的值，我们可以改变标签的文本。
-		self.parnet.l2.setText('Linear Speed: ' + str(value / 10) + ' m/s')
+		self.parent.l2.setText('Linear Speed: ' + str(value / 10) + ' m/s')
 		self.ros.Forward(value / 10)
 
 	def InitRviz(self, rvizPath):
