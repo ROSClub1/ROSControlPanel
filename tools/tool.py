@@ -158,10 +158,10 @@ class BashrcFile(QDialog):
 				lines[i] = ipline
 				findline2 = True
 
-		if !findline1:
+		if findline1 == False:
 			lines.append(nameline)
 			findline1 = True
-		if !findline2:
+		if findline2 == False:
 			lines.append(ipline)
 			findline2 = True
 
