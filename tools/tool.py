@@ -143,18 +143,28 @@ class BashrcFile(QDialog):
 		name = str(self.name.text())
 		ip = str(self.ip.text())
 		lines = self.lines
+		findline1 = False
+		findline2 = False
 		nameline = 'export ROS_HOSTNAME=' + name + '\n'
 		ipline = 'export ROS_MASTER_URI=http://' + ip + ':11311\n'
 		if os.path.exists(BASHRCFILE + '.bak') != True:
 			self.__saveTempFile()
-		if 'export ROS_HOSTNAME=' in lines[-2]:
-			lines[-2] = nameline
-		else:
+
+		for i in range(0, len(lines) - 1):
+			if 'export ROS_HOSTNAME=' in lines[i]:
+				lines[i] = nameline
+				findline1 = True
+			if 'export ROS_MASTER_URI=http://' in lines[i]:
+				lines[i] = ipline
+				findline2 = True
+
+		if !findline1:
 			lines.append(nameline)
-		if 'export ROS_MASTER_URI=http://' in lines[-1]:
-			lines[-1] = ipline
-		else:
+			findline1 = True
+		if !findline2:
 			lines.append(ipline)
+			findline2 = True
+
 		temp = ''
 		for line in lines:
 			temp += str(line)
