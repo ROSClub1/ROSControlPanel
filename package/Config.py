@@ -34,11 +34,12 @@ class Config():
 			self.__config.readfp(open(self.__configpath))
 
 		# initConfigFile(self, **args)
-	def initConfigFile(self, configFilePath, filepath = '', rvizpath = '', launchpath = '', node = '', name = '', mapFilePath = '', enableMap = 0, enableRviz = 0, enableController = 0):
+	def initConfigFile(self, configFilePath, filepath = '', rvizpath = '', launchpath = '', node = '', name = '', mapFilePath = '', enableMap = 0, enableRviz = 0, enableController = 0, maplaunchfilename = ''):
 		self.__config.add_section('filepath')
 		self.__config.set('filepath', 'launchpath', launchpath)
 		self.__config.set('filepath', 'rvizpath', rvizpath)
 		self.__config.set('filepath', 'mapfilepath', mapFilePath)
+		self.__config.set('filepath', 'maplaunchfilepath', maplaunchfilename)
 		self.__config.add_section('setting')
 		self.__config.set('setting', 'node', node)
 		self.__config.set('setting', 'name', name)
@@ -51,10 +52,11 @@ class Config():
 		self.__config.readfp(open(self.__configpath))
 
 		# saveSetting(self, **args)
-	def saveSetting(self, rvizpath, launchpath, node, name, mapFilePath, enableMap, enableRviz, enableController, configFilePath):
+	def saveSetting(self, rvizpath, launchpath, node, name, mapFilePath, enableMap, enableRviz, enableController, configFilePath, maplaunchfilename):
 		self.__config.set('filepath', 'launchpath', launchpath)
 		self.__config.set('filepath', 'rvizpath', rvizpath)
 		self.__config.set('filepath', 'mapfilepath', mapFilePath)
+		self.__config.set('filepath', 'maplaunchfilepath', maplaunchfilename)
 		self.__config.set('setting', 'node', node)
 		self.__config.set('setting', 'name', name)
 		self.__config.set('setting', 'enableRviz', enableRviz)

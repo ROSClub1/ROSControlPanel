@@ -7,7 +7,9 @@ import roslib
 from python_qt_binding.QtGui import *
 from python_qt_binding.QtCore import *
 
-from package import Dialog, Widget
+from package import Dialog, Widget, Arbotix, tool
+
+import wx, locale
 
 from subprocess import Popen
 
@@ -15,6 +17,11 @@ import rospy, sys, os, time
 from geometry_msgs.msg import Twist
 from math import pi
 import rviz
+
+code = QTextCodec.codecForName(locale.getpreferredencoding())
+QTextCodec.setCodecForLocale(code)									# 设置程序能够正确读取到的本地文件的编码方式
+QTextCodec.setCodecForTr(code)										# 使用设定的code编码来解析字符串方法
+QTextCodec.setCodecForCStrings(code)
 
 __path__ = os.path.split(os.path.realpath(__file__))[0]
 
@@ -30,13 +37,16 @@ class MainWindow( QMainWindow ):
 		self.setWindowIcon(QIcon(''.join([__path__, '/icon/icon.jpg'])))
 		self.newAction = QAction(QIcon(''.join([__path__, '/icon/new.png'])), "New", self, statusTip = "Close the active window", triggered = self.__newDialog)
 		self.openAction = QAction(QIcon(''.join([__path__, '/icon/open.png'])), "Open", self, statusTip = "Open Launch File", triggered = self.__OpenProjectFile)
-		self.saveAction = QAction(QIcon(''.join([__path__, '/icon/save.png'])), "Save", self, statusTip = "Close the active window", triggered = self.__saveFile)
+		self.saveAction = QAction(QIcon(''.join([__path__, '/icon/save.png'])), "Save", self, statusTip = "Save Project", triggered = self.__saveFile)
 		self.cutAction = QAction(QIcon(''.join([__path__, '/icon/cut.png'])), "Cut", self, statusTip = "Close the active window", triggered = self.close)
 		self.copyAction = QAction(QIcon(''.join([__path__, '/icon/copy.png'])), "Copy", self, statusTip = "Close the active window", triggered = self.close)
 		self.pasteAction = QAction(QIcon(''.join([__path__, '/icon/paste.png'])), "Paste", self, statusTip = "Close the active window", triggered = self.close)
 		self.findAction = QAction(QIcon(''.join([__path__, '/icon/find.png'])), "Find", self, statusTip = "Close the active window", triggered = self.__findDialog)
 		self.goToCellAction = QAction("Go To", self, statusTip = "Close the active window", triggered = self.close)
+		self.arbotix = QAction("Arbotix Gui", self, statusTip = "Open Arbotix Gui", triggered = self.__arbotix)
+		self.master = QAction("一键配置ROS主从机", self, statusTip = "配置ROS主从机", triggered = self.__master)
 
+		self.connect(self, SIGNAL("openHistoryFile"),self.__OpenRecentProjectFile) 
 		self.rvizPath = None
 		self.node = None
 		self.saveFlag = True
@@ -44,7 +54,10 @@ class MainWindow( QMainWindow ):
 		self.launchfilename = None
 		self.mapfilename = None
 		self.MWidget = None
+		self.wxFrame = None
 		self.historypath = None
+		self.historylist = []
+		self.tempList = []
 
 		self.saveAction.setDisabled(True)
 		self.cutAction.setDisabled(True)
@@ -53,8 +66,8 @@ class MainWindow( QMainWindow ):
 		self.findAction.setDisabled(True)
 		self.goToCellAction.setDisabled(True)
 
-		self.l1 = QLabel("Angular Speed: 0.0 rad/s")
-		self.l2 = QLabel("Linear Speed: 0.0 m/s")
+		# self.l1 = QLabel("Angular Speed: 0.0 rad/s")
+		# self.l2 = QLabel("Linear Speed: 0.0 m/s")
 		
 		self.pbar = QProgressBar(self)
 		self.timer = QBasicTimer()
@@ -70,14 +83,24 @@ class MainWindow( QMainWindow ):
 			r = QMessageBox.question(self, self.tr("Quit"), self.tr("The project is not saved. Do you want to close with out save?"), QMessageBox.Cancel | QMessageBox.Save)
 			if r == QMessageBox.Save:
 				if self.t != None:
+					if self.wxFrame != None:
+						self.wxFrame.OnCloseWindow()
+						self.wxFrame = None
 					system('killall roslaunch')
 					time.sleep(3)
 				self.__saveFile()
+				self.destroy()
 				return e.accept()
-			elif r == QMessageBox.No:
+			elif r == QMessageBox.Cancel:
+				if self.wxFrame != None:
+					self.wxFrame.OnCloseWindow()
+					self.wxFrame = None
+				system('killall roslaunch')
+				self.destroy()
 				return e.ignore()
 		elif self.t != None:
 			system('killall roslaunch')
+			self.destroy()
 
 	# def on_btn1_clicked(self, *args):
 	# 	pass
@@ -108,11 +131,12 @@ class MainWindow( QMainWindow ):
 
 	def __createMenus(self, *args):
 		self.t = None
+		self.m = None
 		self.label1 = None
 		self.label2 = None
 		self.__newProject = QAction(QIcon(''.join([__path__, '/icon/new.png'])), "New", self, statusTip = "Close the active window", triggered = self.__newDialog)
 		self.__openLaunch = QAction(QIcon(''.join([__path__, '/icon/open.png'])), "Open", self, statusTip = "Open Launch File", triggered = self.__OpenProjectFile)
-		self.__saveProject = QAction(QIcon(''.join([__path__, '/icon/save.png'])), "Save", self, statusTip = "Close the active window", triggered = self.__saveFile)
+		self.__saveProject = QAction(QIcon(''.join([__path__, '/icon/save.png'])), "Save", self, statusTip = "Save Project", triggered = self.__saveFile)
 		self.__setting = QAction(QIcon(''.join([__path__, '/icon/save.png'])), "Setting", self, statusTip = "Close the active window", triggered = self.__saveSetting)
 		self.__close = QAction("Cl&ose", self, shortcut = "Ctrl+Q", statusTip = "Close the active window", triggered = self.close)
 		self.__copy = QAction(QIcon(''.join([__path__, '/icon/copy.png'])), "Copy", self, statusTip = "Close the active window", triggered = self.close)
@@ -140,12 +164,14 @@ class MainWindow( QMainWindow ):
 		self.__copy.setDisabled(True)
 		self.__paste.setDisabled(True)
 		self.__selectAll.setDisabled(True)
+		self.arbotix.setDisabled(True)
 
 		self.__history = self.__menubar.addMenu('&History')
 		# self.__history.addAction(self.__copy)
 
 		self.__tools = self.__menubar.addMenu('&Tools')
-		# self.__tools.addAction(self.__copy)
+		self.__tools.addAction(self.arbotix)
+		self.__tools.addAction(self.master)
 
 		self.__help = self.__menubar.addMenu('&Help')
 		self.__help.addAction(self.__about)
@@ -197,6 +223,16 @@ class MainWindow( QMainWindow ):
 		d = Dialog.Find(self)
 		d.show()
 
+	def __master(self):
+		Window = tool.MainWindow()
+		Window.show()
+
+	def __arbotix(self):
+		rospy.init_node('controllerGUI')
+		self.app = wx.PySimpleApp()
+		self.wxFrame = Arbotix.controllerGUI(None, True)
+		self.app.MainLoop()
+
 	def __openAbout(self, *args):
 		QMessageBox.about(self, self.tr("About ROS Control Panel"), self.tr("<h2>ROS Control Panel v 0.1.0-beta</h2>""<p>Copyright &copy; 2016 Software Inc."))
 
@@ -219,9 +255,11 @@ class MainWindow( QMainWindow ):
 		
 		if self.step == 5:
 			if self.mapfilename != '':
-				self.t = Popen(['roslaunch', self.launchfilename, 'map:=' + os.path.split(self.mapfilename)[1]])
+				self.m = Popen(['roslaunch', self.maplaunchfilename, 'map:=' + os.path.split(self.mapfilename)[1]])
 			else:
 				self.t = Popen(['roslaunch', self.launchfilename])
+		elif self.step == 75 and self.t != None:
+			self.t = Popen(['roslaunch', self.launchfilename])
 
 		self.step = self.step + 2.5
 		self.pbar.setValue(self.step)
@@ -234,23 +272,58 @@ class MainWindow( QMainWindow ):
 		else:
 			self.timer.start(50, self)
 
-	def launch(self, launchfilename, mapfilename):
+	def launch(self, launchfilename, mapfilename, maplaunchfilename):
 		self.launchfilename = launchfilename
 		self.mapfilename = mapfilename
+		self.maplaunchfilename = maplaunchfilename
 		from os import system
 		if self.mapfilename != '':
 			if self.t != None:
 				system('killall roslaunch')
-				self.statusBar().removeWidget(self.l1)
-				self.statusBar().removeWidget(self.l2)
+				# self.statusBar().removeWidget(self.l1)
+				# self.statusBar().removeWidget(self.l2)
 				time.sleep(3)
 			self.loadLaunchFilePrograss()
 		else:
 			if self.t != None:
 				system('killall roslaunch')
-				self.statusBar().removeWidget(self.l1)
-				self.statusBar().removeWidget(self.l2)
+				# self.statusBar().removeWidget(self.l1)
+				# self.statusBar().removeWidget(self.l2)
 				time.sleep(3)
+			self.loadLaunchFilePrograss()
+
+	def emitFilePathSignal(self):
+		self.emit(SIGNAL("openHistoryFile"), self.tempList[len(self.tempList) - 1]['path'])
+
+	def __OpenRecentProjectFile(self, filepath):
+		import ConfigParser
+		from os import system
+		config = ConfigParser.RawConfigParser()
+		config.readfp(open(str(filepath)))
+		self.rvizPath = config.get('filepath', 'rvizpath')
+		self.node = config.get('setting', 'node')
+		self.launchfilename = config.get('filepath', 'launchpath')
+		enableMap = config.get('setting', 'enablemap')
+		self.mapfilename = config.get('filepath', 'mapfilepath')
+		if self.saveFlag != True:
+			self.saveFlag = True
+		if int(enableMap) != 0:
+			if self.t != None:
+				system('killall roslaunch')
+				time.sleep(10)
+				# self.statusBar().removeWidget(self.l1)
+				# self.statusBar().removeWidget(self.l2)
+				self.MWidget.frame.destroy()
+				self.MWidget.close()
+			self.loadLaunchFilePrograss()
+		else:
+			if self.t != None:
+				system('killall roslaunch')
+				time.sleep(10)
+				# self.statusBar().removeWidget(self.l1)
+				# self.statusBar().removeWidget(self.l2)
+				self.MWidget.frame.destroy()
+				self.MWidget.close()
 			self.loadLaunchFilePrograss()
 
 	def __OpenProjectFile(self, *args):
@@ -260,6 +333,16 @@ class MainWindow( QMainWindow ):
 		default = '$HOME/Documents'
 		fileName = QFileDialog.getOpenFileName(self, "Open Project File", os.path.expandvars(default), "Project Files (*.proj *.PROJ)")
 		if str(fileName[0]) != '':
+			if ({'name':os.path.split(str(fileName[0]))[1],'path':str(fileName[0])} in self.tempList) == False:
+				self.tempList.append({'name':os.path.split(str(fileName[0]))[1],'path':str(fileName[0])})
+				item = QAction(self.tempList[len(self.tempList) - 1]['name'], self)
+				self.connect(item, SIGNAL("triggered()"), self.emitFilePathSignal)
+				# self.emit(SIGNAL("openHistoryFile"), len(self.tempList) - 1)
+				# self.historylist.append(item)
+				# for i in range(len(self.historylist) - 1, -1, -1):
+				self.__history.addAction(item)
+				self.update
+
 			config.readfp(open(str(fileName[0])))
 			self.rvizPath = config.get('filepath', 'rvizpath')
 			self.node = config.get('setting', 'node')
@@ -271,18 +354,20 @@ class MainWindow( QMainWindow ):
 			if int(enableMap) != 0:
 				if self.t != None:
 					system('killall roslaunch')
-					self.statusBar().removeWidget(self.l1)
-					self.statusBar().removeWidget(self.l2)
+					# self.statusBar().removeWidget(self.l1)
+					# self.statusBar().removeWidget(self.l2)
 					time.sleep(3)
 				self.loadLaunchFilePrograss()
+				self.arbotix.setDisabled(False)
 			else:
 				if self.t != None:
 					system('killall roslaunch')
-					self.statusBar().removeWidget(self.l1)
-					self.statusBar().removeWidget(self.l2)
+					# self.statusBar().removeWidget(self.l1)
+					# self.statusBar().removeWidget(self.l2)
 					time.sleep(3)
 				self.loadLaunchFilePrograss()
-				
+				self.arbotix.setDisabled(False)
+
 def main(*args):
 
 	app = QApplication(sys.argv)

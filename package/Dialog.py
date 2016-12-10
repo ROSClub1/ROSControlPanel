@@ -276,11 +276,12 @@ class New(QDialog):
 			else:
 				self.parent.tmpfilename = '/tmp/tmp.' + str(int(r.random() * 100000000000))
 				self.parent.saveFlag = False
-				self.Config.saveSetting(rvizpath = self.tab1.rvizFilePath.text(), launchpath = self.tab1.launchFilePath.text(), node = self.tab1.node.text(), name = 'ROS Control Panel', mapFilePath = '', enableMap = 0, enableRviz = 0, enableController = 0, configFilePath = self.parent.tmpfilename)
+				self.parent.arbotix.setDisabled(False)
+				self.Config.saveSetting(rvizpath = self.tab1.rvizFilePath.text(), launchpath = self.tab1.launchFilePath.text(), node = self.tab1.node.text(), name = 'ROS Control Panel', mapFilePath = '', enableMap = 0, enableRviz = 0, enableController = 0, configFilePath = self.parent.tmpfilename, maplaunchfilename = '')
 				self.accept()
 				self.parent.rvizPath = self.tab1.rvizFilePath.text()
 				self.parent.node = self.tab1.node.text()
-				self.parent.launch(launchfilename = self.tab1.launchFilePath.text(), mapfilename = '')
+				self.parent.launch(launchfilename = self.tab1.launchFilePath.text(), mapfilename = '', maplaunchfilename = '')
 		else:
 			if os.path.isfile(self.tab1.launchFilePath.text()) != True or os.path.isfile(self.tab1.rvizFilePath.text()) != True or os.path.isfile(self.tab2.mapFilePath.text()) != True:
 				if os.path.isfile(self.tab1.launchFilePath.text()) != True:
@@ -299,11 +300,12 @@ class New(QDialog):
 				# /tmp/tmp
 				self.parent.tmpfilename = '/tmp/tmp.' + str(int(r.random() * 100000000000))
 				self.parent.saveFlag = False
-				self.Config.saveSetting(rvizpath = self.tab1.rvizFilePath.text(), launchpath = self.tab1.launchFilePath.text(), node = self.tab1.node.text(), name = 'ROS Control Panel', mapFilePath = self.tab2.mapFilePath.text(), enableMap = 1, enableRviz = 0, enableController = 0, configFilePath = self.parent.tmpfilename)
+				self.parent.arbotix.setDisabled(False)
+				self.Config.saveSetting(rvizpath = self.tab1.rvizFilePath.text(), launchpath = self.tab1.launchFilePath.text(), node = self.tab1.node.text(), name = 'ROS Control Panel', mapFilePath = self.tab2.mapFilePath.text(), enableMap = 1, enableRviz = 0, enableController = 0, configFilePath = self.parent.tmpfilename, maplaunchfilename = self.tab2.mapLaunchPath.text())
 				self.accept()
 				self.parent.rvizPath = self.tab1.rvizFilePath.text()
 				self.parent.node = self.tab1.node.text()
-				self.parent.launch(launchfilename = self.tab1.launchFilePath.text(), mapfilename = self.tab2.mapFilePath.text())
+				self.parent.launch(launchfilename = self.tab1.launchFilePath.text(), mapfilename = self.tab2.mapFilePath.text(), maplaunchfilename = self.tab2.mapLaunchPath.text())
 
 class BaseTabWidget(QDialog):
 	"""docstring for BaseTabWidget"""
@@ -400,19 +402,29 @@ class AdvancedTabWidget(QDialog):
 		self.labelMapFilePath = QLabel('Map file:')
 		self.mapFilePath = QLineEdit()
 		self.browseButton = QPushButton('&Browse')
+		self.labelMapLaunchPath = QLabel('Map Launch file:')
+		self.mapLaunchPath = QLineEdit()
+		self.mapLaunchBrowseButton = QPushButton('&Browse')
 
 		if self.enableMapCheckBox.isChecked() == False:
 			self.enableMap = 0
 			self.labelMapFilePath.setDisabled(True)
+			self.labelMapLaunchPath.setDisabled(True)
 			self.mapFilePath.setDisabled(True)
 			self.browseButton.setDisabled(True)
+			self.mapLaunchPath.setDisabled(True)
+			self.mapLaunchBrowseButton.setDisabled(True)
 		else:
 			self.enableMap = 1
 			self.labelMapFilePath.setDisabled(False)
+			self.labelMapLaunchPath.setDisabled(False)
 			self.mapFilePath.setDisabled(False)
 			self.browseButton.setDisabled(False)
+			self.mapLaunchPath.setDisabled(False)
+			self.mapLaunchBrowseButton.setDisabled(False)
 
 		self.connect(self.browseButton, SIGNAL("clicked()"), self.__browseMapFile)
+		self.connect(self.mapLaunchBrowseButton, SIGNAL("clicked()"), self.__browseLaunchFile)
 
 		self.__init()
 		self.setFixedSize(400, 320)
@@ -423,6 +435,9 @@ class AdvancedTabWidget(QDialog):
 		self.topLayout.addWidget(self.labelMapFilePath, 1, 0)
 		self.topLayout.addWidget(self.mapFilePath, 1, 1)
 		self.topLayout.addWidget(self.browseButton, 1, 2)
+		self.topLayout.addWidget(self.labelMapLaunchPath, 2, 0)
+		self.topLayout.addWidget(self.mapLaunchPath, 2, 1)
+		self.topLayout.addWidget(self.mapLaunchBrowseButton, 2, 2)
 
 		self.setLayout(self.topLayout)
 
@@ -430,13 +445,19 @@ class AdvancedTabWidget(QDialog):
 		if self.enableMapCheckBox.isChecked() == False:
 			self.enableMap = 0
 			self.labelMapFilePath.setDisabled(True)
+			self.labelMapLaunchPath.setDisabled(True)
 			self.mapFilePath.setDisabled(True)
 			self.browseButton.setDisabled(True)
+			self.mapLaunchPath.setDisabled(True)
+			self.mapLaunchBrowseButton.setDisabled(True)
 		else:
 			self.enableMap = 1
 			self.labelMapFilePath.setDisabled(False)
+			self.labelMapLaunchPath.setDisabled(False)
 			self.mapFilePath.setDisabled(False)
 			self.browseButton.setDisabled(False)
+			self.mapLaunchPath.setDisabled(False)
+			self.mapLaunchBrowseButton.setDisabled(False)
 
 	def __browseMapFile(self):
 		if self.parent.parent.historypath == None:
@@ -450,3 +471,16 @@ class AdvancedTabWidget(QDialog):
 		if str(fileName[0]) != '':
 			self.parent.parent.historypath = str(fileName[0])
 			self.mapFilePath.setText(str(fileName[0]))
+
+	def __browseLaunchFile(self):
+		if self.parent.parent.historypath == None:
+			openpath = os.path.expandvars('$HOME')
+		else:
+			if os.path.isfile(self.parent.parent.historypath):
+				openpath = os.path.dirname(self.parent.parent.historypath)
+			elif os.path.isdir(self.parent.parent.historypath):
+				openpath = self.parent.parent.historypath
+		fileName = QFileDialog.getOpenFileName(self, "Open Launch File", openpath, "Launch Files (*.launch *.LAUNCH)")
+		if str(fileName[0]) != '':
+			self.parent.parent.historypath = str(fileName[0])
+			self.mapLaunchPath.setText(str(fileName[0]))
