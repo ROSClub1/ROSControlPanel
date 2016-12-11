@@ -1,7 +1,7 @@
 #Readme
 ###ROSControlPanel使用说明
 ####1、启动软件
-在命令行中进入ROSControlPanel文件夹，输入./ControlPanel.py或python ControlPanel.py命令后会车进入程序
+在命令行中进入ROSControlPanel文件夹，输入./ControlPanel.py或python ControlPanel.py命令后回车后进入程序
 ####2、新建工作环境
 在File菜单中点击New选项，在弹出窗口中选择launch文件和rviz文件路径，选择Continue按钮后，界面会启动一个rviz，同时后台会运行对应的launch文件
 ####3、小工具
