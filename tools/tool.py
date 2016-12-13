@@ -97,14 +97,12 @@ class MainWindow( QWidget ):
 	def __init__(self):
 		super(MainWindow, self).__init__()
 		self.master = None
-		self.tab1 = MasterBashrcFile(self)
-		# self.tab2 = HostBashrcFile(self)
+		self.tab = MasterBashrcFile(self)
 
-		self.baseTabWidget = QTabWidget()
-		self.baseTabWidget.setTabPosition(QTabWidget.North)
+		# self.baseTabWidget = QTabWidget()
+		# self.baseTabWidget.setTabPosition(QTabWidget.North)
 
-		self.baseTabWidget.addTab(self.tab1, self.tr('配   置'))
-		# self.baseTabWidget.addTab(self.tab2, self.tr('配置从机'))
+		# self.baseTabWidget.addTab(self.tab, self.tr('配   置'))
 
 		self.setFixedSize(640, 480)
 		self.setWindowTitle('一键配置ROS主从机工具')
@@ -116,7 +114,7 @@ class MainWindow( QWidget ):
 	def init(self):
 
 		self.mainLayout = QVBoxLayout()
-		self.mainLayout.addWidget(self.baseTabWidget)
+		self.mainLayout.addWidget(self.tab)
 
 		self.setLayout(self.mainLayout)
 
@@ -149,8 +147,6 @@ class MasterBashrcFile(QDialog):
 		self.masterIP.setValidator(QRegExpValidator(regExp,self))
 
 		self.lines = None
-		self.text = QTextEdit()
-		self.text.setReadOnly(True)
 
 		self.saveButton.setEnabled(False)
 		self.recoverButton.setEnabled(False)
@@ -159,7 +155,10 @@ class MasterBashrcFile(QDialog):
 		self.__init()
 
 	def warning(self):
-		QMessageBox.critical(self, "错误", self.tr("远程设备无法连接!")) 
+		QMessageBox.critical(self, "错误", self.tr("远程设备无法连接!"))
+
+	def information(self):
+		QMessageBox.information(self, "信息", self.tr("主从机配置已完成"))
 		
 	def __init(self):
 		self.frame = QVBoxLayout()
@@ -198,7 +197,16 @@ class MasterBashrcFile(QDialog):
 		self.frame.addLayout(self.widget)
 
 		self.bottomLayout = QHBoxLayout()
-		self.bottomLayout.addWidget(self.text)
+		self.tab1 = QTextEdit()
+		self.tab2 = QTextEdit()
+		self.tab1.setReadOnly(True)
+		self.tab2.setReadOnly(True)
+		self.baseTabWidget = QTabWidget()
+		self.baseTabWidget.setTabPosition(QTabWidget.North)
+
+		self.baseTabWidget.addTab(self.tab1, self.tr('主机配置文件内容'))
+		self.baseTabWidget.addTab(self.tab2, self.tr('从机配置文件内容'))
+		self.bottomLayout.addWidget(self.baseTabWidget)
 
 		self.mainLayout = QVBoxLayout()
 		self.mainLayout.addLayout(self.frame)
@@ -247,7 +255,7 @@ class MasterBashrcFile(QDialog):
 		temp = ''
 		for line in lines:
 			temp += str(line)
-		self.text.setText(temp)
+		self.tab1.setText(temp)
 		os.system('. ' + BASHRCFILE)
 		self.recoverButton.setEnabled(False)
 
@@ -260,17 +268,18 @@ class MasterBashrcFile(QDialog):
 			f = getFile(unicode(QString(self.UserName.text()).toUtf8(), 'utf-8', 'ignore'), hostIP, unicode(QString(self.PassWord.text()).toUtf8(), 'utf-8', 'ignore'))
 			if f == -1:
 				self.warning()
+				return
 			else:
 				hostFileLines = self.getFileLines(TMPFILE)
-				masterFileLine = 'export ROS_IP=' + masterIP + '\n'
-				hostFileURILine = 'export ROS_MASTER_URI=http://' + masterIP + ':11311\n'
-				hostFileIPLine = 'export ROS_IP=' + hostIP + '\n'
+				masterFileLine = 'export ROS_IP=' + masterIP + '	#rosIP\n'
+				hostFileURILine = 'export ROS_MASTER_URI=http://' + masterIP + ':11311		#ros Master URI\n'
+				hostFileIPLine = 'export ROS_IP=' + hostIP + '	#rosIP\n'
 				masterFileFindLine = False
 				hostFileFindURILine = False
 				hostFileFindIPLine = False
 
 				for i in range(0, len(masterFileLines) - 1):
-					if 'export ROS_IP=' in masterFileLines[i]:
+					if '#rosIP' in masterFileLines[i]:
 						masterFileLines[i] = masterFileLine
 						masterFileFindLine = True
 
@@ -279,10 +288,10 @@ class MasterBashrcFile(QDialog):
 					masterFileFindLine = True
 
 				for i in range(0, len(hostFileLines) - 1):
-					if 'export ROS_IP=' in hostFileLines[i]:
+					if '#rosIP' in hostFileLines[i]:
 						hostFileLines[i] = hostFileIPLine
 						hostFileFindIPLine = True
-					if 'export ROS_MASTER_URI=http://' in hostFileLines[i]:
+					if '#ros Master URI' in hostFileLines[i]:
 						hostFileLines[i] = hostFileURILine
 						hostFileFindURILine = True
 
@@ -293,23 +302,30 @@ class MasterBashrcFile(QDialog):
 					hostFileLines.append(hostFileURILine)
 					hostFileFindURILine = True
 
-				temp = ''
+				temp1 = ''
 				for line in masterFileLines:
-					temp += str(line)
-				self.text.setText(temp)
+					temp1 += str(line)
+				temp2 = ''
+				for line in hostFileLines:
+					temp2 += str(line)
+				self.tab1.setText(temp1)
+				self.tab2.setText(temp2)
 				self.setFileLines(BASHRCFILE, masterFileLines)
 				self.setFileLines(TMPFILE, hostFileLines)
 				f = putFile(unicode(QString(self.UserName.text()).toUtf8(), 'utf-8', 'ignore'), hostIP, unicode(QString(self.PassWord.text()).toUtf8(), 'utf-8', 'ignore'))
 				if f == -1:
 					self.warning()
+					return
 				else:
 					child = connect(unicode(QString(self.UserName.text()).toUtf8(), 'utf-8', 'ignore'), hostIP, unicode(QString(self.PassWord.text()).toUtf8(), 'utf-8', 'ignore'))
 					if child == -1:
 						self.warning()
+						return
 					else:
 						sendCommand(child, 'source ~/.bashrc')
 						child.sendline('exit')
 						os.system('. ' + BASHRCFILE)
+			self.information()
 		else:
 			hostFileLines = self.getFileLines(BASHRCFILE)
 			masterIP = self.masterIP.text()
@@ -317,17 +333,18 @@ class MasterBashrcFile(QDialog):
 			f = getFile(unicode(QString(self.UserName.text()).toUtf8(), 'utf-8', 'ignore'), hostIP, unicode(QString(self.PassWord.text()).toUtf8(), 'utf-8', 'ignore'))
 			if f == -1:
 				self.warning()
+				return
 			else:
 				masterFileLines = self.getFileLines(TMPFILE)
-				masterFileLine = 'export ROS_IP=' + masterIP + '\n'
-				hostFileURILine = 'export ROS_MASTER_URI=http://' + masterIP + ':11311\n'
-				hostFileIPLine = 'export ROS_IP=' + hostIP + '\n'
+				masterFileLine = 'export ROS_IP=' + masterIP + '	#rosIP\n'
+				hostFileURILine = 'export ROS_MASTER_URI=http://' + masterIP + ':11311		#ros Master URI\n'
+				hostFileIPLine = 'export ROS_IP=' + hostIP + '	#rosIP\n'
 				masterFileFindLine = False
 				hostFileFindURILine = False
 				hostFileFindIPLine = False
 
 				for i in range(0, len(masterFileLines) - 1):
-					if 'export ROS_IP=' in masterFileLines[i]:
+					if '#rosIP' in masterFileLines[i]:
 						masterFileLines[i] = masterFileLine
 						masterFileFindLine = True
 
@@ -336,10 +353,10 @@ class MasterBashrcFile(QDialog):
 					masterFileFindLine = True
 
 				for i in range(0, len(hostFileLines) - 1):
-					if 'export ROS_IP=' in hostFileLines[i]:
+					if '#rosIP' in hostFileLines[i]:
 						hostFileLines[i] = hostFileIPLine
 						hostFileFindIPLine = True
-					if 'export ROS_MASTER_URI=http://' in hostFileLines[i]:
+					if '#ros Master URI' in hostFileLines[i]:
 						hostFileLines[i] = hostFileURILine
 						hostFileFindURILine = True
 
@@ -350,24 +367,31 @@ class MasterBashrcFile(QDialog):
 					hostFileLines.append(hostFileURILine)
 					hostFileFindURILine = True
 
-				temp = ''
+				temp1 = ''
 				for line in masterFileLines:
-					temp += str(line)
-				self.text.setText(temp)
+					temp1 += str(line)
+				temp2 = ''
+				for line in hostFileLines:
+					temp2 += str(line)
+				self.tab1.setText(temp1)
+				self.tab2.setText(temp2)
 				self.setFileLines(BASHRCFILE, masterFileLines)
 				self.setFileLines(TMPFILE, hostFileLines)
 				f = putFile(unicode(QString(self.UserName.text()).toUtf8(), 'utf-8', 'ignore'), hostIP, unicode(QString(self.PassWord.text()).toUtf8(), 'utf-8', 'ignore'))
 				if f == -1:
 					self.warning()
+					return
 				else:
 					child = connect(unicode(QString(self.UserName.text()).toUtf8(), 'utf-8', 'ignore'), hostIP, unicode(QString(self.PassWord.text()).toUtf8(), 'utf-8', 'ignore'))
 					if child == -1:
 						self.warning()
+						return
 					else:
 						sendCommand(child, 'source ~/.bashrc')
 						child.sendline('exit')
 						os.system('. ' + BASHRCFILE)
 		# self.recoverButton.setEnabled(True)
+			self.information()
 
 def main(*args):
 
