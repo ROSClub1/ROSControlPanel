@@ -99,11 +99,6 @@ class MainWindow( QWidget ):
 		self.master = None
 		self.tab = MasterBashrcFile(self)
 
-		# self.baseTabWidget = QTabWidget()
-		# self.baseTabWidget.setTabPosition(QTabWidget.North)
-
-		# self.baseTabWidget.addTab(self.tab, self.tr('配   置'))
-
 		self.setFixedSize(640, 480)
 		self.setWindowTitle('一键配置ROS主从机工具')
 		self.setWindowModality(Qt.ApplicationModal)
@@ -278,8 +273,8 @@ class MasterBashrcFile(QDialog):
 				hostFileFindURILine = False
 				hostFileFindIPLine = False
 
-				for i in range(0, len(masterFileLines) - 1):
-					if '#rosIP' in masterFileLines[i]:
+				for i in range(0, len(masterFileLines)):
+					if '#rosIP\n' in masterFileLines[i]:
 						masterFileLines[i] = masterFileLine
 						masterFileFindLine = True
 
@@ -287,11 +282,11 @@ class MasterBashrcFile(QDialog):
 					masterFileLines.append(masterFileLine)
 					masterFileFindLine = True
 
-				for i in range(0, len(hostFileLines) - 1):
-					if '#rosIP' in hostFileLines[i]:
+				for i in range(0, len(hostFileLines)):
+					if '#rosIP\n' in hostFileLines[i]:
 						hostFileLines[i] = hostFileIPLine
 						hostFileFindIPLine = True
-					if '#ros Master URI' in hostFileLines[i]:
+					if '#ros Master URI\n' in hostFileLines[i]:
 						hostFileLines[i] = hostFileURILine
 						hostFileFindURILine = True
 
@@ -343,8 +338,8 @@ class MasterBashrcFile(QDialog):
 				hostFileFindURILine = False
 				hostFileFindIPLine = False
 
-				for i in range(0, len(masterFileLines) - 1):
-					if '#rosIP' in masterFileLines[i]:
+				for i in range(0, len(masterFileLines)):
+					if '#rosIP\n' in masterFileLines[i]:
 						masterFileLines[i] = masterFileLine
 						masterFileFindLine = True
 
@@ -352,11 +347,11 @@ class MasterBashrcFile(QDialog):
 					masterFileLines.append(masterFileLine)
 					masterFileFindLine = True
 
-				for i in range(0, len(hostFileLines) - 1):
-					if '#rosIP' in hostFileLines[i]:
+				for i in range(0, len(hostFileLines)):
+					if '#rosIP\n' in hostFileLines[i]:
 						hostFileLines[i] = hostFileIPLine
 						hostFileFindIPLine = True
-					if '#ros Master URI' in hostFileLines[i]:
+					if '#ros Master URI\n' in hostFileLines[i]:
 						hostFileLines[i] = hostFileURILine
 						hostFileFindURILine = True
 
