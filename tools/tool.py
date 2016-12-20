@@ -140,6 +140,7 @@ class MasterBashrcFile(QDialog):
 		self.masterIP.setText(getLocalIP('eth0'))
 		self.masterIP.textChanged[str].connect(self.onTextChanged)
 		self.masterIP.setValidator(QRegExpValidator(regExp,self))
+		self.hostIP.setValidator(QRegExpValidator(regExp,self))
 
 		self.lines = None
 
@@ -274,7 +275,7 @@ class MasterBashrcFile(QDialog):
 				hostFileFindIPLine = False
 
 				for i in range(0, len(masterFileLines)):
-					if '#rosIP\n' in masterFileLines[i]:
+					if '#rosIP' in masterFileLines[i]:
 						masterFileLines[i] = masterFileLine
 						masterFileFindLine = True
 
@@ -283,10 +284,10 @@ class MasterBashrcFile(QDialog):
 					masterFileFindLine = True
 
 				for i in range(0, len(hostFileLines)):
-					if '#rosIP\n' in hostFileLines[i]:
+					if '#rosIP' in hostFileLines[i]:
 						hostFileLines[i] = hostFileIPLine
 						hostFileFindIPLine = True
-					if '#ros Master URI\n' in hostFileLines[i]:
+					if '#ros Master URI' in hostFileLines[i]:
 						hostFileLines[i] = hostFileURILine
 						hostFileFindURILine = True
 
@@ -339,7 +340,7 @@ class MasterBashrcFile(QDialog):
 				hostFileFindIPLine = False
 
 				for i in range(0, len(masterFileLines)):
-					if '#rosIP\n' in masterFileLines[i]:
+					if '#rosIP' in masterFileLines[i]:
 						masterFileLines[i] = masterFileLine
 						masterFileFindLine = True
 
@@ -348,10 +349,10 @@ class MasterBashrcFile(QDialog):
 					masterFileFindLine = True
 
 				for i in range(0, len(hostFileLines)):
-					if '#rosIP\n' in hostFileLines[i]:
+					if '#rosIP' in hostFileLines[i]:
 						hostFileLines[i] = hostFileIPLine
 						hostFileFindIPLine = True
-					if '#ros Master URI\n' in hostFileLines[i]:
+					if '#ros Master URI' in hostFileLines[i]:
 						hostFileLines[i] = hostFileURILine
 						hostFileFindURILine = True
 
